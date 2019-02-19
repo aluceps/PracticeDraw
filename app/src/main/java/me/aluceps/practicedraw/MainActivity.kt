@@ -19,6 +19,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupClick() {
         binding.toolbar.undo.setOnClickListener { }
         binding.toolbar.redo.setOnClickListener { }
-        binding.toolbar.reset.setOnClickListener { }
+        binding.toolbar.reset.setOnClickListener { binding.drawView.reset() }
     }
 }
