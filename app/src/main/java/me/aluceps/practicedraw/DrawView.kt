@@ -1,7 +1,10 @@
 package me.aluceps.practicedraw
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
+import android.support.annotation.IdRes
+import android.support.v4.content.res.ResourcesCompat
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -109,5 +112,10 @@ class DrawView @JvmOverloads constructor(
         surfaceHolder.lockCanvas().apply {
             drawColor(0, PorterDuff.Mode.CLEAR)
         }.let { surfaceHolder.unlockCanvasAndPost(it) }
+    }
+
+    @SuppressLint("ResourceType")
+    fun color(@IdRes resId: Int) {
+        paint.color = ResourcesCompat.getColor(resources, resId, null)
     }
 }

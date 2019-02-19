@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    >
+
+    <android.support.constraint.ConstraintLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        >
+
+        <View
+            android:id="@+id/outer"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/shape_circle"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintDimensionRatio="w,1:1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:backgroundTint="@color/colorPrimary"
+            />
+
+        <View
+            android:id="@+id/inner"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:background="@drawable/shape_circle"
+            app:layout_constraintBottom_toBottomOf="@id/outer"
+            app:layout_constraintDimensionRatio="w,1:1"
+            app:layout_constraintEnd_toEndOf="@id/outer"
+            app:layout_constraintStart_toStartOf="@id/outer"
+            app:layout_constraintTop_toTopOf="@id/outer"
+            tools:backgroundTint="@color/colorPrimaryDark"
+            />
+    </android.support.constraint.ConstraintLayout>
+</layout>
