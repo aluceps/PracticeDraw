@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupClick()
+        setupSeekbar()
         setupRecyclerView()
     }
 
@@ -34,6 +35,14 @@ class MainActivity : AppCompatActivity() {
             undo.setOnClickListener { binding.drawView.undo() }
             redo.setOnClickListener { binding.drawView.redo() }
             reset.setOnClickListener { binding.drawView.reset() }
+        }
+    }
+
+    private fun setupSeekbar() {
+        with(binding.strokeWidth) {
+            setOnSliderProgressChangeListener {
+                binding.drawView.strokeWidth(it * 6)
+            }
         }
     }
 

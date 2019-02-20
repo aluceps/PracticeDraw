@@ -30,7 +30,7 @@ class DrawView @JvmOverloads constructor(
     private val undoStack = ArrayDeque<DrewInfo>()
     private val redoStack = ArrayDeque<DrewInfo>()
 
-    private var currentColor: ColorPallet = ColorPallet.Black
+    private var currentColor: ColorPallet? = null
 
     val isUndoable
         get() = undoStack.isNotEmpty()
@@ -51,10 +51,11 @@ class DrawView @JvmOverloads constructor(
         paint = Paint().apply {
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
             isAntiAlias = true
         }
-        color(currentColor)
-        strokeWidth(12f)
+        color(ColorPallet.Black)
+        strokeWidth(0f)
     }
 
     override fun surfaceCreated(holder: SurfaceHolder?) {
@@ -106,7 +107,7 @@ class DrawView @JvmOverloads constructor(
             p.lineTo(x, y)
             drawLine(p, paint)
             lastDrawCanvas?.drawPath(p, paint)
-            undoStack.addLast(DrewInfo(p, currentColor))
+            undoStack.addLast(DrewInfo(p, currentColor!!))
             if (isUndoable && isRedoable) redoStack.clear()
         }
         Logger.d("touchUp: x=$x y=$y undo=${undoStack.size}")
@@ -167,13 +168,19 @@ class DrawView @JvmOverloads constructor(
         ResourcesCompat.getColor(resources, color.resId, null)
 
     fun color(color: ColorPallet) {
-        Logger.d("currentColor: $color")
         currentColor = color
         paint.color = getColor(color)
+        Logger.d("currentColor: $color")
     }
 
     fun strokeWidth(size: Float) {
-        paint.strokeWidth = size
+        val width = BASE_STROKE_WIDTH * (1 + size)
+        paint.strokeWidth = width
+        Logger.d("currentWidth: $width")
+    }
+
+    companion object {
+        private const val BASE_STROKE_WIDTH = 12.0f
     }
 
     private object Logger {

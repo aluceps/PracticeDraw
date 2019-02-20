@@ -20,6 +20,34 @@
             app:layout_constraintTop_toTopOf="parent"
             />
 
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/colorBackgroundTransparent"
+            app:layout_constraintBottom_toBottomOf="@id/stroke_width"
+            app:layout_constraintEnd_toEndOf="@id/stroke_width"
+            app:layout_constraintStart_toStartOf="@id/stroke_width"
+            app:layout_constraintTop_toTopOf="@id/stroke_width"
+            />
+
+        <com.bosphere.verticalslider.VerticalSlider
+            android:id="@+id/stroke_width"
+            android:layout_width="48dp"
+            android:layout_height="240dp"
+            android:layout_margin="16dp"
+            android:background="@drawable/bg_seekbar"
+            app:layout_constraintBottom_toBottomOf="@id/draw_view"
+            app:layout_constraintEnd_toEndOf="@id/draw_view"
+            app:layout_constraintHorizontal_bias="1"
+            app:layout_constraintStart_toStartOf="@id/draw_view"
+            app:layout_constraintTop_toTopOf="@id/draw_view"
+            app:layout_constraintVertical_bias="1"
+            app:vs_thumb_color="@android:color/white"
+            app:vs_thumb_radius="20dp"
+            app:vs_track_bg_thickness="0dp"
+            app:vs_track_fg_thickness="0dp"
+            />
+
         <include
             android:id="@+id/toolbar"
             layout="@layout/layout_toolbar"
