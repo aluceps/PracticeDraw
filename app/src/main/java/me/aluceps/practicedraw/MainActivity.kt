@@ -3,12 +3,10 @@ package me.aluceps.practicedraw
 import android.annotation.SuppressLint
 import android.databinding.DataBindingUtil
 import android.os.Bundle
-import android.support.annotation.IdRes
 import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,17 +19,9 @@ class MainActivity : AppCompatActivity() {
         DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main)
     }
 
-    private val colors = listOf(
-        R.color.colorTypeRed,
-        R.color.colorTypeOrange,
-        R.color.colorTypeYellow,
-        R.color.colorTypeGreen,
-        R.color.colorTypePurple,
-        R.color.colorTypeBlue,
-        R.color.colorTypeLightBlue,
-        R.color.colorTypeBlack,
-        R.color.colorTypeWhite
-    )
+    private val colors by lazy {
+        ColorPallet.values().toList()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,8 +31,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupClick() {
         with(binding.toolbar) {
-            undo.setOnClickListener { }
-            redo.setOnClickListener { }
+            undo.setOnClickListener { binding.drawView.redo() }
+            redo.setOnClickListener {}
             reset.setOnClickListener { binding.drawView.reset() }
         }
     }
@@ -65,7 +55,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     class PalletAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        private val items: MutableList<Int> = mutableListOf()
+        private val items: MutableList<ColorPallet> = mutableListOf()
         private var listener: OnClickListener? = null
 
         override fun onCreateViewHolder(p0: ViewGroup, p1: Int): RecyclerView.ViewHolder =
@@ -77,9 +67,8 @@ class MainActivity : AppCompatActivity() {
         override fun onBindViewHolder(p0: RecyclerView.ViewHolder, p1: Int) {
             (p0 as PalletHolder).apply {
                 setup(items[p1])
-                setOnClickListener(object : PalletHolder.OnClickLisnter {
+                setOnClickListener(object : PalletHolder.OnClickListener {
                     override fun click(view: View) {
-                        Log.d("MainActivity", "click")
                         AnimationHelper.setAnimation(view)
                         listener?.click(p1)
                     }
@@ -87,7 +76,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        fun setItems(items: List<Int>) {
+        fun setItems(items: List<ColorPallet>) {
             items.forEach { this.items.add(it) }
         }
 
@@ -102,29 +91,28 @@ class MainActivity : AppCompatActivity() {
 
     class PalletHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val binding = ItemPalletBinding.bind(itemView)!!
-        private var listener: OnClickLisnter? = null
+        private var listener: OnClickListener? = null
 
-        @SuppressLint("ResourceType")
-        fun setup(@IdRes resId: Int) {
+        fun setup(pallet: ColorPallet) {
             with(binding) {
-                inner.setTint(resId)
-                outer.setTint(android.R.color.white)
+                inner.setTint(pallet)
+                outer.setTint(ColorPallet.White)
                 executePendingBindings()
             }
             itemView.setOnClickListener { listener?.click(it) }
         }
 
-        fun setOnClickListener(listener: OnClickLisnter) {
+        fun setOnClickListener(listener: OnClickListener) {
             this.listener = listener
         }
 
-        interface OnClickLisnter {
+        interface OnClickListener {
             fun click(view: View)
         }
 
         @SuppressLint("ResourceType")
-        private fun View.setTint(@IdRes resId: Int) {
-            background.setTint(ResourcesCompat.getColor(resources, resId, null))
+        private fun View.setTint(pallet: ColorPallet) {
+            background.setTint(ResourcesCompat.getColor(resources, pallet.resId, null))
         }
     }
 }

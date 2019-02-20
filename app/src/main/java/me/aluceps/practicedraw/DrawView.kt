@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import java.util.*
 
 class DrawView @JvmOverloads constructor(
     context: Context?,
@@ -21,8 +22,19 @@ class DrawView @JvmOverloads constructor(
     private var paint: Paint
     private var path: Path
 
-    private var bitmap: Bitmap? = null
-    private var canvas: Canvas? = null
+    private var lastDrawBitmap: Bitmap? = null
+    private var lastDrawCanvas: Canvas? = null
+
+    data class DrewInfo(val path: Path, val paint: Paint)
+
+    private val undoStack = ArrayDeque<DrewInfo>()
+    private val redoStack = ArrayDeque<DrewInfo>()
+
+    val isUndoable
+        get() = undoStack.isNotEmpty()
+
+    val isRedoable
+        get() = redoStack.isNotEmpty()
 
     init {
         setZOrderOnTop(true)
@@ -33,40 +45,35 @@ class DrawView @JvmOverloads constructor(
             it.setFormat(PixelFormat.TRANSPARENT)
         }
 
-        paint = Paint()
         path = Path()
-
-        with(paint) {
-            color = Color.BLACK
+        paint = Paint().apply {
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             isAntiAlias = true
-            strokeWidth = 10F
         }
+        color(ColorPallet.Black)
+        strokeWidth(12f)
     }
 
     override fun surfaceCreated(holder: SurfaceHolder?) {
-        Log.d("DrawView", "surfaceCreated")
-        clearLastDrawBitmap()
+        clearLastDrawBitmap(paint.color)
     }
 
     override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-        Log.d("DrawView", "surfaceChanged")
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder?) {
-        Log.d("DrawView", "surfaceDestroyed")
-        bitmap?.recycle()
+        lastDrawBitmap?.recycle()
     }
 
-    private fun clearLastDrawBitmap() {
-        if (bitmap == null) {
-            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    private fun clearLastDrawBitmap(@IdRes resId: Int) {
+        if (lastDrawBitmap == null) {
+            lastDrawBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         }
-        if (canvas == null) {
-            bitmap?.let { canvas = Canvas(it) }
+        if (lastDrawCanvas == null) {
+            lastDrawBitmap?.let { lastDrawCanvas = Canvas(it) }
         }
-        canvas?.drawColor(paint.color, PorterDuff.Mode.CLEAR)
+        lastDrawCanvas?.drawColor(resId, PorterDuff.Mode.CLEAR)
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
@@ -79,12 +86,14 @@ class DrawView @JvmOverloads constructor(
     }
 
     private fun touchDown(x: Float, y: Float) {
+        Logger.d("touchDown: x=$x y=$y")
         path = Path().apply {
             moveTo(x, y)
         }
     }
 
     private fun touchMove(x: Float, y: Float) {
+        Logger.d("touchMove: x=$x y=$y")
         path.also { p ->
             p.lineTo(x, y)
             drawLine(p)
@@ -92,30 +101,70 @@ class DrawView @JvmOverloads constructor(
     }
 
     private fun touchUp(x: Float, y: Float) {
+        Logger.d("touchUp: x=$x y=$y undo=${undoStack.size}")
         path.also { p ->
             p.lineTo(x, y)
             drawLine(p)
-            canvas?.drawPath(p, paint)
+            lastDrawCanvas?.drawPath(p, paint)
+            undoStack.addLast(DrewInfo(p, paint))
         }
     }
 
-    private fun drawLine(path: Path) {
+    private fun redraw(action: ((canvas: Canvas) -> Unit)? = null) {
         surfaceHolder.lockCanvas().apply {
             drawColor(0, PorterDuff.Mode.CLEAR)
-            bitmap?.let { drawBitmap(it, 0f, 0f, null) }
-            drawPath(path, paint)
+            action?.invoke(this)
         }.let { surfaceHolder.unlockCanvasAndPost(it) }
+    }
+
+    private fun drawLine(path: Path) {
+        Logger.d("drawLine")
+        redraw { c ->
+            lastDrawBitmap?.let { c.drawBitmap(it, 0f, 0f, null) }
+            c.drawPath(path, paint)
+        }
     }
 
     fun reset() {
-        clearLastDrawBitmap()
-        surfaceHolder.lockCanvas().apply {
-            drawColor(0, PorterDuff.Mode.CLEAR)
-        }.let { surfaceHolder.unlockCanvasAndPost(it) }
+        Logger.d("reset")
+        clearLastDrawBitmap(paint.color)
+        undoStack.addLast(DrewInfo(Path(), Paint()))
+        redraw()
+    }
+
+    fun redo() {
+        if (undoStack.isEmpty()) return
+        undoStack.removeLast()?.let {
+            redoStack.addLast(it)
+        }
+        Logger.d("undo=${undoStack.size}")
+        clearLastDrawBitmap(paint.color)
+        redraw { c ->
+            undoStack.forEach { d ->
+                Logger.d("undo=${undoStack.size}")
+                c.drawPath(d.path, d.paint)
+                lastDrawCanvas?.drawPath(d.path, d.paint)
+            }
+        }
     }
 
     @SuppressLint("ResourceType")
-    fun color(@IdRes resId: Int) {
-        paint.color = ResourcesCompat.getColor(resources, resId, null)
+    fun color(pallet: ColorPallet) {
+        Logger.d("color: $pallet")
+        paint.color = ResourcesCompat.getColor(resources, pallet.resId, null)
+    }
+
+    fun strokeWidth(size: Float) {
+        paint.strokeWidth = size
+    }
+
+    private object Logger {
+        private const val TAG = "DrawView"
+
+        fun d(message: String) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, message)
+            }
+        }
     }
 }
