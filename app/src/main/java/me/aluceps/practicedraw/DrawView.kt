@@ -25,12 +25,13 @@ class DrawView @JvmOverloads constructor(
     private var lastDrawBitmap: Bitmap? = null
     private var lastDrawCanvas: Canvas? = null
 
-    data class DrewInfo(val path: Path, val color: ColorPallet)
+    data class DrewInfo(val path: Path, val color: ColorPallet, val width: Float)
 
     private val undoStack = ArrayDeque<DrewInfo>()
     private val redoStack = ArrayDeque<DrewInfo>()
 
     private var currentColor: ColorPallet? = null
+    private var currentWidth: Float = 0f
 
     val isUndoable
         get() = undoStack.isNotEmpty()
@@ -109,7 +110,7 @@ class DrawView @JvmOverloads constructor(
             p.lineTo(x, y)
             drawLine(p, paint)
             lastDrawCanvas?.drawPath(p, paint)
-            undoStack.addLast(DrewInfo(p, currentColor!!))
+            undoStack.addLast(DrewInfo(p, currentColor!!, currentWidth))
             if (isUndoable && isRedoable) redoStack.clear()
         }
         Logger.d("touchUp: x=$x y=$y undo=${undoStack.size}")
@@ -146,6 +147,7 @@ class DrawView @JvmOverloads constructor(
             clearLastDrawBitmap(paint.color)
             undoStack.toList().forEachIndexed { i, d ->
                 paint.color = getColor(d.color)
+                paint.strokeWidth = d.width
                 canvas.drawPath(d.path, paint)
                 lastDrawCanvas?.drawPath(d.path, paint)
                 Logger.d("undo: i=$i color=${d.color}")
@@ -159,6 +161,7 @@ class DrawView @JvmOverloads constructor(
         redoStack.removeLast()?.let { d ->
             undoStack.addLast(d)
             paint.color = getColor(d.color)
+            paint.strokeWidth = d.width
             drawLine(d.path, paint)
             lastDrawCanvas?.drawPath(d.path, paint)
         }
@@ -177,6 +180,7 @@ class DrawView @JvmOverloads constructor(
 
     fun strokeWidth(size: Float) {
         val width = BASE_STROKE_WIDTH * (1 + size)
+        currentWidth = width
         paint.strokeWidth = width
         Logger.d("currentWidth: $width")
     }
