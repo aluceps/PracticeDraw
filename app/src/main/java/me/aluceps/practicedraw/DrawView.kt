@@ -70,6 +70,8 @@ class DrawView @JvmOverloads constructor(
         lastDrawBitmap?.recycle()
         lastDrawBitmap = null
         lastDrawCanvas = null
+        undoStack.clear()
+        redoStack.clear()
     }
 
     private fun clearLastDrawBitmap(@IdRes resId: Int) {
