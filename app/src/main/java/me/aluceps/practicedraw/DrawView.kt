@@ -25,10 +25,12 @@ class DrawView @JvmOverloads constructor(
     private var lastDrawBitmap: Bitmap? = null
     private var lastDrawCanvas: Canvas? = null
 
-    data class DrewInfo(val path: Path, val paint: Paint)
+    data class DrewInfo(val path: Path, val color: ColorPallet)
 
     private val undoStack = ArrayDeque<DrewInfo>()
     private val redoStack = ArrayDeque<DrewInfo>()
+
+    private var currentColor: ColorPallet = ColorPallet.Black
 
     val isUndoable
         get() = undoStack.isNotEmpty()
@@ -51,7 +53,7 @@ class DrawView @JvmOverloads constructor(
             strokeCap = Paint.Cap.ROUND
             isAntiAlias = true
         }
-        color(ColorPallet.Black)
+        color(currentColor)
         strokeWidth(12f)
     }
 
@@ -81,19 +83,18 @@ class DrawView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> touchDown(event.x, event.y)
             MotionEvent.ACTION_MOVE -> touchMove(event.x, event.y)
             MotionEvent.ACTION_UP -> touchUp(event.x, event.y)
+            else -> Unit
         }
         return true
     }
 
     private fun touchDown(x: Float, y: Float) {
-        Logger.d("touchDown: x=$x y=$y")
         path = Path().apply {
             moveTo(x, y)
         }
     }
 
     private fun touchMove(x: Float, y: Float) {
-        Logger.d("touchMove: x=$x y=$y")
         path.also { p ->
             p.lineTo(x, y)
             drawLine(p, paint)
@@ -101,13 +102,14 @@ class DrawView @JvmOverloads constructor(
     }
 
     private fun touchUp(x: Float, y: Float) {
-        Logger.d("touchUp: x=$x y=$y undo=${undoStack.size}")
         path.also { p ->
             p.lineTo(x, y)
             drawLine(p, paint)
             lastDrawCanvas?.drawPath(p, paint)
-            undoStack.addLast(DrewInfo(p, paint))
+            undoStack.addLast(DrewInfo(p, currentColor))
+            if (isUndoable && isRedoable) redoStack.clear()
         }
+        Logger.d("touchUp: x=$x y=$y undo=${undoStack.size}")
     }
 
     private fun redraw(action: ((canvas: Canvas) -> Unit)? = null) {
@@ -118,7 +120,6 @@ class DrawView @JvmOverloads constructor(
     }
 
     private fun drawLine(path: Path, paint: Paint) {
-        Logger.d("drawLine")
         redraw { c ->
             lastDrawBitmap?.let { c.drawBitmap(it, 0f, 0f, null) }
             c.drawPath(path, paint)
@@ -126,11 +127,11 @@ class DrawView @JvmOverloads constructor(
     }
 
     fun reset() {
-        Logger.d("reset")
         undoStack.clear()
         redoStack.clear()
         clearLastDrawBitmap(paint.color)
         redraw()
+        Logger.d("reset: undo=${undoStack.size} redo=${redoStack.size}")
     }
 
     fun undo() {
@@ -138,28 +139,37 @@ class DrawView @JvmOverloads constructor(
         undoStack.removeLast()?.let {
             redoStack.addLast(it)
         }
-        clearLastDrawBitmap(paint.color)
-        redraw { c ->
-            undoStack.forEach { d ->
-                c.drawPath(d.path, d.paint)
-                lastDrawCanvas?.drawPath(d.path, d.paint)
+        redraw { canvas ->
+            clearLastDrawBitmap(paint.color)
+            undoStack.toList().forEachIndexed { i, d ->
+                paint.color = getColor(d.color)
+                canvas.drawPath(d.path, paint)
+                lastDrawCanvas?.drawPath(d.path, paint)
+                Logger.d("undo: i=$i color=${d.color}")
             }
         }
+        Logger.d("undo: undo=${undoStack.size} redo=${redoStack.size}")
     }
 
     fun redo() {
         if (!isRedoable) return
-        redoStack.removeLast()?.let {
-            undoStack.addLast(it)
-            drawLine(it.path, it.paint)
-            lastDrawCanvas?.drawPath(it.path, it.paint)
+        redoStack.removeLast()?.let { d ->
+            undoStack.addLast(d)
+            paint.color = getColor(d.color)
+            drawLine(d.path, paint)
+            lastDrawCanvas?.drawPath(d.path, paint)
         }
+        Logger.d("redo: undo=${undoStack.size} redo=${redoStack.size}")
     }
 
     @SuppressLint("ResourceType")
-    fun color(pallet: ColorPallet) {
-        Logger.d("color: $pallet")
-        paint.color = ResourcesCompat.getColor(resources, pallet.resId, null)
+    private fun getColor(color: ColorPallet): Int =
+        ResourcesCompat.getColor(resources, color.resId, null)
+
+    fun color(color: ColorPallet) {
+        Logger.d("currentColor: $color")
+        currentColor = color
+        paint.color = getColor(color)
     }
 
     fun strokeWidth(size: Float) {
