@@ -31,8 +31,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupClick() {
         with(binding.toolbar) {
-            undo.setOnClickListener { binding.drawView.redo() }
-            redo.setOnClickListener {}
+            undo.setOnClickListener { binding.drawView.undo() }
+            redo.setOnClickListener { binding.drawView.redo() }
             reset.setOnClickListener { binding.drawView.reset() }
         }
     }

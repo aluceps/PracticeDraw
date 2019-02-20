@@ -96,7 +96,7 @@ class DrawView @JvmOverloads constructor(
         Logger.d("touchMove: x=$x y=$y")
         path.also { p ->
             p.lineTo(x, y)
-            drawLine(p)
+            drawLine(p, paint)
         }
     }
 
@@ -104,7 +104,7 @@ class DrawView @JvmOverloads constructor(
         Logger.d("touchUp: x=$x y=$y undo=${undoStack.size}")
         path.also { p ->
             p.lineTo(x, y)
-            drawLine(p)
+            drawLine(p, paint)
             lastDrawCanvas?.drawPath(p, paint)
             undoStack.addLast(DrewInfo(p, paint))
         }
@@ -117,7 +117,7 @@ class DrawView @JvmOverloads constructor(
         }.let { surfaceHolder.unlockCanvasAndPost(it) }
     }
 
-    private fun drawLine(path: Path) {
+    private fun drawLine(path: Path, paint: Paint) {
         Logger.d("drawLine")
         redraw { c ->
             lastDrawBitmap?.let { c.drawBitmap(it, 0f, 0f, null) }
@@ -127,24 +127,32 @@ class DrawView @JvmOverloads constructor(
 
     fun reset() {
         Logger.d("reset")
+        undoStack.clear()
+        redoStack.clear()
         clearLastDrawBitmap(paint.color)
-        undoStack.addLast(DrewInfo(Path(), Paint()))
         redraw()
     }
 
-    fun redo() {
-        if (undoStack.isEmpty()) return
+    fun undo() {
+        if (!isUndoable) return
         undoStack.removeLast()?.let {
             redoStack.addLast(it)
         }
-        Logger.d("undo=${undoStack.size}")
         clearLastDrawBitmap(paint.color)
         redraw { c ->
             undoStack.forEach { d ->
-                Logger.d("undo=${undoStack.size}")
                 c.drawPath(d.path, d.paint)
                 lastDrawCanvas?.drawPath(d.path, d.paint)
             }
+        }
+    }
+
+    fun redo() {
+        if (!isRedoable) return
+        redoStack.removeLast()?.let {
+            undoStack.addLast(it)
+            drawLine(it.path, it.paint)
+            lastDrawCanvas?.drawPath(it.path, it.paint)
         }
     }
 
