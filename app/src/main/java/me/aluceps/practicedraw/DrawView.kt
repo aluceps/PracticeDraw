@@ -67,6 +67,8 @@ class DrawView @JvmOverloads constructor(
 
     override fun surfaceDestroyed(holder: SurfaceHolder?) {
         lastDrawBitmap?.recycle()
+        lastDrawBitmap = null
+        lastDrawCanvas = null
     }
 
     private fun clearLastDrawBitmap(@IdRes resId: Int) {
