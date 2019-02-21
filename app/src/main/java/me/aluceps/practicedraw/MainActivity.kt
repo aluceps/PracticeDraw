@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupSeekbar() {
         with(binding.strokeWidth) {
             setOnSliderProgressChangeListener {
-                binding.drawView.strokeWidth(it * 6)
+                binding.drawView.setStrokeWidth(it * 6)
             }
         }
     }
@@ -50,9 +50,14 @@ class MainActivity : AppCompatActivity() {
         with(binding.toolbar.recyclerView) {
             adapter = PalletAdapter().apply {
                 setItems(colors)
-                setOnClickListener(object : PalletAdapter.OnClickListener {
-                    override fun click(position: Int) {
-                        binding.drawView.color(colors[position])
+                setOnClickListener(object : PalletAdapter.OnEventListener {
+                    override fun setFocus(view: View, position: Int) {
+                        binding.drawView.setColor(colors[position])
+                        AnimationHelper.scaleUp(view)
+                    }
+
+                    override fun lostFocus(view: View?) {
+                        view?.let { AnimationHelper.scaleDown(it) }
                     }
                 })
             }
@@ -65,42 +70,49 @@ class MainActivity : AppCompatActivity() {
 
     class PalletAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         private val items: MutableList<ColorPallet> = mutableListOf()
-        private var listener: OnClickListener? = null
+        private var listener: OnEventListener? = null
+        private var currentFocus = -1
+        private var previousView: View? = null
 
-        override fun onCreateViewHolder(p0: ViewGroup, p1: Int): RecyclerView.ViewHolder =
-            PalletHolder(LayoutInflater.from(p0.context).inflate(R.layout.item_pallet, p0, false))
+        override fun onCreateViewHolder(parent: ViewGroup, index: Int): RecyclerView.ViewHolder =
+            PalletHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_pallet, parent, false))
 
-        override fun getItemCount(): Int =
-            items.size
-
-        override fun onBindViewHolder(p0: RecyclerView.ViewHolder, p1: Int) {
-            (p0 as PalletHolder).apply {
-                setup(items[p1])
-                setOnClickListener(object : PalletHolder.OnClickListener {
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, index: Int) {
+            (holder as PalletHolder).apply {
+                setup(items[index])
+                setOnClickListener(object : PalletHolder.Listener {
                     override fun click(view: View) {
-                        AnimationHelper.setAnimation(view)
-                        listener?.click(p1)
+                        if (currentFocus >= 0 && currentFocus != index) {
+                            listener?.lostFocus(previousView)
+                        }
+                        previousView = view
+                        currentFocus = index
+                        listener?.setFocus(view, index)
                     }
                 })
             }
         }
 
+        override fun getItemCount(): Int = items.size
+
         fun setItems(items: List<ColorPallet>) {
             items.forEach { this.items.add(it) }
+            notifyDataSetChanged()
         }
 
-        fun setOnClickListener(listener: OnClickListener) {
+        fun setOnClickListener(listener: OnEventListener) {
             this.listener = listener
         }
 
-        interface OnClickListener {
-            fun click(position: Int)
+        interface OnEventListener {
+            fun setFocus(view: View, position: Int)
+            fun lostFocus(view: View?)
         }
     }
 
     class PalletHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val binding = ItemPalletBinding.bind(itemView)!!
-        private var listener: OnClickListener? = null
+        private var listener: Listener? = null
 
         fun setup(pallet: ColorPallet) {
             with(binding) {
@@ -108,20 +120,25 @@ class MainActivity : AppCompatActivity() {
                 outer.setTint(ColorPallet.White)
                 executePendingBindings()
             }
-            itemView.setOnClickListener { listener?.click(it) }
+            itemView.setOnClickListener {
+                listener?.click(it)
+            }
         }
 
-        fun setOnClickListener(listener: OnClickListener) {
+        fun setOnClickListener(listener: Listener) {
             this.listener = listener
         }
 
-        interface OnClickListener {
+        interface Listener {
             fun click(view: View)
         }
 
-        @SuppressLint("ResourceType")
         private fun View.setTint(pallet: ColorPallet) {
-            background.setTint(ResourcesCompat.getColor(resources, pallet.resId, null))
+            background.setTint(getColor(pallet))
         }
+
+        @SuppressLint("ResourceType")
+        private fun View.getColor(pallet: ColorPallet): Int =
+            ResourcesCompat.getColor(resources, pallet.resId, null)
     }
 }
