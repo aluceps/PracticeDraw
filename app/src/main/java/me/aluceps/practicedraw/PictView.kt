@@ -81,6 +81,9 @@ class PictView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         logWrite("onDraw")
+        if (canvas == null || bitmap == null) {
+            setup(width, height)
+        }
         isReset {
             canvas?.drawBitmap(bitmap!!, 0f, 0f, background)
             drawHistory(canvas)
@@ -115,6 +118,7 @@ class PictView @JvmOverloads constructor(
      * undoStack の内容を canvas に再現する
      */
     private fun drawHistory(c: Canvas?) {
+        logWrite("drawHistory")
         undoStack.toList().forEach { d ->
             Paint().setup().also { p ->
                 p.setColor(d.color)
@@ -129,6 +133,7 @@ class PictView @JvmOverloads constructor(
      * path は undo の時に null にしている
      */
     private fun drawLatest(c: Canvas?) {
+        logWrite("drawLatest")
         path?.also {
             setColor(currentColor)
             setStrokeWidth(currentStrokeRatio)
@@ -150,6 +155,7 @@ class PictView @JvmOverloads constructor(
 
     fun reset() {
         isClear = true
+        path = null
         undoStack.clear()
         redoStack.clear()
         postInvalidate()
